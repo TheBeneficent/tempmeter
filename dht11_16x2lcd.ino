@@ -1,9 +1,11 @@
 #include <WiFi.h>
-#include <LiquidCrystal.h>
+// #include <LiquidCrystal.h>
 #include "DHT.h"
 
-uint16_t Humi;
-uint16_t Temp;
+float Humi;
+float Temp;
+float Smoke;
+uint8_t isSmoke;
 
 const char* ssid     = "xxx";
 const char* password = "xxx";
@@ -19,7 +21,7 @@ WiFiServer server(80);
 //arduino
 // LiquidCrystal lcd(40, 41, 42, 43, 44, 45);
 //esp32
-LiquidCrystal lcd(13, 12, 14, 27, 26, 25);
+// LiquidCrystal lcd(13, 12, 14, 27, 26, 25);
  
  //stm32
 // #define DHTPIN  PA6           // DHT11 data pin is connected to Blue Pill PA6 pin
@@ -28,8 +30,14 @@ LiquidCrystal lcd(13, 12, 14, 27, 26, 25);
 // #define DHTPIN  46
 // #define LEDPIN 13
 //esp32
-#define DHTPIN  33
+#define DHTPIN  14
+#define MQ2A 32
+#define MQ2D 15
 #define LEDPIN 2
+#define VCCPIN 27
+#define VCCPIN2 34
+#define GNDPIN 13
+#define GNDPIN2 35
 
 #define DHTTYPE DHT11         // DHT11 sensor is used
 DHT dht11(DHTPIN, DHTTYPE);   // initialize DHT library
@@ -39,6 +47,14 @@ uint16_t LedDelay = 100;
 void setup() {
 
   pinMode(LEDPIN,OUTPUT);
+  pinMode(VCCPIN,OUTPUT);
+  // pinMode(VCCPIN2,OUTPUT);
+  pinMode(GNDPIN,OUTPUT);
+  // pinMode(GNDPIN2,OUTPUT);
+  digitalWrite(VCCPIN,HIGH);
+  // digitalWrite(VCCPIN2,HIGH);
+  digitalWrite(GNDPIN,LOW);
+  // digitalWrite(GNDPIN2,LOW);
   Serial.begin(9600);
 
   WiFi.begin(ssid, password);
@@ -59,6 +75,8 @@ char dis_buf[7];
 void loop() {
   Humi = dht11.readHumidity();
   Temp = dht11.readTemperature();
+  Smoke = analogRead(MQ2A);
+  isSmoke = !digitalRead(MQ2D);
 
   if(WiFi.status() != WL_CONNECTED){
     LedDelay=10;
@@ -72,7 +90,9 @@ void loop() {
   delay(LedDelay);           // wait 1 second between readings
   digitalWrite(LEDPIN,LOW);
 
-
+// Serial.println(Temp);
+// Serial.println(Smoke);
+// Serial.println(isSmoke);
  
   
  
@@ -101,6 +121,7 @@ void webserver(){
             // and a content-type so the client knows what's coming, then a blank line:
             client.println("HTTP/1.1 200 OK");
             client.println("Content-type:application/json");
+            client.println("Access-Control-Allow-Origin: *");
             client.println("Connection: close");
             client.println();
             
@@ -110,6 +131,10 @@ void webserver(){
             client.print(Temp);
             client.print(",\"humid\":");
             client.print(Humi);
+            client.print(",\"gas\":");
+            client.print(Smoke);
+            client.print(",\"smoking\":");
+            client.print(isSmoke);
             client.println("}");
             
             // The HTTP response ends with another blank line
@@ -134,7 +159,7 @@ void webserver(){
 }
 
 
-void lcdSetup(){
+/*void lcdSetup(){
   lcd.begin(16, 2);
  
   lcd.setCursor(0, 0);           // move cursor to position (0, 0) -- 1st column & 1st row
@@ -167,5 +192,5 @@ void lcdDrive(){
   sprintf( dis_buf, "%02u.%1u %%", (Humi / 10) % 100, Humi % 10 );
   lcd.setCursor(6, 1);
   lcd.print(dis_buf);
-}
+}*/
  
